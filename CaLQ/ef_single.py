@@ -117,7 +117,7 @@ def collect_efficiencies(input_dir: Path, output_dir: Path):
             continue
 
         model = model_dir.name
-        channel = "i" if channel_dir.name == "NP" else "t"
+        channel = "t" if channel_dir.name == "NP" else "i"
         encoded_couplings = run_dir.name.removeprefix(f"{channel_dir.name}_").split("_")
         first_coupling = re.fullmatch(
             r"LM(\d)(\d)(LL|LR|RL|RR)", encoded_couplings[0]

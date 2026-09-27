@@ -107,7 +107,7 @@ def collect_cross_sections(input_dir: Path, output_dir: Path):
             continue
 
         column = "_".join(coupling_name(token, model) for token in tokens)
-        filename = "interference.csv" if channel == "NP" else "tchannel.csv"
+        filename = "tchannel.csv" if channel == "NP" else "interference.csv"
         table = tables.setdefault((model, filename), {})
         mass_values = read_summary(path)
         if mass_values:
