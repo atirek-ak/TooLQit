@@ -41,9 +41,8 @@ You will be greeted with CaLQ banner and a list of available commands. The promp
 ```
 calq > import_model= U1
 calq > mass= 1500.0
-calq > couplings= X10LL[3,3] 
+calq > couplings= X33LL3x3
 calq > significance= 2
-calq > ignore_single_pair= yes
 calq > systematic_error= 0.1
 calq > status
 calq > help
@@ -54,11 +53,10 @@ The list of valid commands are:
 - `import_model=` to specify which leptoquark model to use.
 - `mass=` should be an integer between 1000 and 3000 (inclusive).
 - `couplings=` should list couplings in the correct format as mentioned in the paper [arXiv:2412.19729](https://arxiv.org/abs/2412.19729). <br>
-For example, _X10LL[3,3]_ for $U_1$ LQ ( _Y10LL[3,3]_ if $S_1$ LQ ) where, _L_ or _R_ denote left or right handedness respectively.
+For example, _X33LL3x3_ for $U_1$ LQ ( _Y33LL3x3_ if $S_1$ LQ ) where, _L_ or _R_ denote left or right handedness respectively.
 - `significance=` takes values 1 or 2.
 - `extra_width=` take any positive value. In case of an additional
 decay mode, you can input extra width
-- `ignore_single_pair=` takes values _yes_ or _no_. Input _yes_ means that the single and pair productions will be ignored and this will speed up calculations.
 - `systematic_error=` denotes the systematic error margin. Default is 10%.
 - `status` displays the current values of input parameters.
 - `help` displays the list of commands available.
@@ -93,7 +91,7 @@ python3 calq.py [options]
 ```
 Options:
 - `--help`: Display this help message.
-- `--input-card=[filename]`: Input card file. Line 1: mass, line 2: couplings, line 3: ignore_single_pair, line 4: sigma. These are same as input parameter values mentioned in the interactive version.
+- `--input-card=[filename]`: Input card file. Line 1: mass, line 2: couplings, line 3: sigma. These are same as input parameter values mentioned in the interactive version.
 - `--input-values=[filename]`: Input values to check from the given file. Each line contains a query value. If there are _n_ couplings, then each line would be `<f1> <f2> ... <fn>`, where _\<fi>_ are float values.
 - `--non-interactive` or `-ni`: Run in non-interactive mode. This requires input-card and input-values to be specified
 - `--no-banner` or `-nb`: calq banner is not printed.

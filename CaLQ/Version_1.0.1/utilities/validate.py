@@ -1,9 +1,47 @@
 import os
+import re
 from typing import Tuple, List
 
 from utilities.colour import prRed
-from utilities.constants import scalar_leptoquark_models, vector_leptoquark_models, maximum_leptoquark_mass, minimum_leptoquark_mass
+from utilities.constants import (
+    get_cross_sections_df_interference,
+    maximum_leptoquark_mass,
+    minimum_leptoquark_mass,
+)
 from utilities.data_classes import LeptoquarkParameters
+
+
+def getAvailableCouplings(leptoquark_model: str) -> set:
+    return {
+        coupling
+        for coupling in get_cross_sections_df_interference(leptoquark_model).columns
+        if coupling != "Mass" and "_" not in coupling
+    }
+
+
+def _toDataCoupling(coupling: str) -> str:
+    input_match = re.fullmatch(r"([XY])10([LR]{2})\[([1-3]),([1-3])\]", coupling)
+    if input_match:
+        particle, chirality, quark_generation, lepton_generation = input_match.groups()
+        return (
+            f"{particle}{quark_generation}{lepton_generation}{chirality}"
+            f"{quark_generation}x{lepton_generation}"
+        )
+
+    data_match = re.fullmatch(r"([XY][1-3]{2}[LR]{2}[1-3])[xX]([1-3])", coupling)
+    if data_match:
+        return f"{data_match.group(1)}x{data_match.group(2)}"
+
+    return coupling
+
+
+def getUnavailableCouplings(couplings: List[str], leptoquark_model: str) -> List[str]:
+    available_couplings = getAvailableCouplings(leptoquark_model)
+    return [
+        coupling
+        for coupling in couplings
+        if _toDataCoupling(coupling) not in available_couplings
+    ]
 
 def checkIfFilesExist(files: List[str]):
     for file in files:
@@ -16,7 +54,6 @@ def validateInputData(
     leptoquark_model: str,
     leptoquark_mass: str, 
     couplings: str, 
-    ignore_single_pair_processes: str, 
     significance: str, 
     systematic_error: str,
     extra_width: str,
@@ -27,9 +64,6 @@ def validateInputData(
     Validate the data from both interactive and non-interactive modes and raise corresponding errors for the user to understand the issue
     After validating, convert the data to the appropriate type, & return a class that can be used throughout instead of passing multiple variables
     """
-    # validate leptoquark model
-    if leptoquark_model not in scalar_leptoquark_models and leptoquark_model not in vector_leptoquark_models:
-        raise ValueError(f"[Model error]: Not a valid leptoquark model. Allowed models: {scalar_leptoquark_models + vector_leptoquark_models}")
 
     # validate leptoquark mass
     try:
@@ -41,7 +75,7 @@ def validateInputData(
 
 
     # validate couplings
-    couplings_list = couplings.strip().split(' ')
+    couplings_list = couplings.strip().split()
 
     # Count frequency of each element
     frequency = {}
@@ -52,40 +86,13 @@ def validateInputData(
             frequency[item] = 1
     if not len(couplings_list):
         raise ValueError("[Couplings error]: Couplings cannot be empty. For valid format, refer to README")
-    for i in range(len(couplings_list)):
-        if len(couplings_list[i].strip()) != 10:
-            raise ValueError(f"[Couplings error]: The couplings input {couplings_list[i]} is not 10 characters. For valid format, refer to README")
-        if not (
-            (couplings_list[i][0] == 'Y' and leptoquark_model in scalar_leptoquark_models)
-            or (couplings_list[i][0] == 'X' and leptoquark_model in vector_leptoquark_models)
-        ):
-            raise ValueError("[Couplings error]: For scalar leptoquarks, the first letter should be Y & for vector leptoquarks it should be X. For valid format, refer to README")
-            # prRed("[Couplings error]: For scalar leptoquarks, the first letter should be Y & for vector leptoquarks it should be X. For valid format, refer to README")
-        if couplings_list[i][1:3] != "10":
-            raise ValueError(f"[Couplings error]: The second and third characters of {couplings_list[i]} should be '10'. For valid format, refer to README")
-        if couplings_list[i][3] not in ["L", "R"]:
-            raise ValueError(f"[Couplings error]: The 4th character of {couplings_list[i]} should be either L or R for left-handed & right-handed couplings respectively. For valid format, refer to README")
-        if couplings_list[i][4] not in ["L", "R"]:
-            raise ValueError(f"[Couplings error]: The 5th character of {couplings_list[i]} should be either L or R for left-handed & right-handed couplings respectively. For valid format, refer to README")
-        if couplings_list[i][5] != '[':
-            raise ValueError(f"[Couplings error]: The 6th character of {couplings_list[i]} should be '['. For valid format, refer to README")
-        if (leptoquark_model in scalar_leptoquark_models and couplings_list[i][6] not in ["1", "2"]) or (leptoquark_model in vector_leptoquark_models and couplings_list[i][6] not in ["1", "2", "3"]):
-            raise ValueError(f"[Couplings error]: The 7th character of {couplings_list[i]} should be a valid quark generation. For valid format, refer to README")
-        if couplings_list[i][7] != ',':
-            raise ValueError(f"[Couplings error]: The 8th character of {couplings_list[i]} should be ','. For valid format, refer to README")
-        if couplings_list[i][8] not in ["1", "2", "3"]:
-            raise ValueError(f"[Couplings error]: The 9th character of {couplings_list[i]} should be a valid lepton generation. For valid format, refer to README")
-        if couplings_list[i][9] != ']':
-            raise ValueError(f"[Couplings error]: The 10th character of {couplings_list[i]} should be ']'. For valid format, refer to README")
-    couplings = couplings_list
-
-    # validate Ignore single and pair production
-    if ignore_single_pair_processes.lower() in {"yes", "y", "true", "t", "1"}:
-        ignore_single_pair_processes = True
-    elif ignore_single_pair_processes.lower() in {"no", "n", "false", "f", "0"}:
-        ignore_single_pair_processes = False
-    else:
-        raise ValueError("[Ignore single pair production error]: ignore_single_pair takes input either 'yes'/'y' or 'no'/'n'")
+    unavailable_couplings = getUnavailableCouplings(couplings_list, leptoquark_model)
+    if unavailable_couplings:
+        raise ValueError(
+            f"[Couplings error]: Coupling {unavailable_couplings[0]} is not "
+            f"available for model {leptoquark_model}."
+        )
+    couplings = [_toDataCoupling(coupling) for coupling in couplings_list]
 
     # validate significance
     try:
@@ -128,7 +135,6 @@ def validateInputData(
         leptoquark_model=leptoquark_model,
         leptoquark_mass=leptoquark_mass,
         couplings=couplings,
-        ignore_single_pair_processes=ignore_single_pair_processes,
         significance=significance,
         systematic_error=systematic_error,
         extra_width=extra_width,

@@ -9,7 +9,6 @@ class LeptoquarkParameters:
         self,
         leptoquark_model: str = '',
         leptoquark_mass: float = 0.0,
-        ignore_single_pair_processes: bool = False,
         significance: int = 0,
         systematic_error: float = 0.0,
         extra_width: float = 0.0,
@@ -22,7 +21,6 @@ class LeptoquarkParameters:
         self.leptoquark_model = leptoquark_model
         self.leptoquark_mass = leptoquark_mass
         self.couplings = couplings
-        self.ignore_single_pair_processes = ignore_single_pair_processes
         self.significance = significance
         self.systematic_error = systematic_error
         self.extra_width = extra_width
@@ -35,7 +33,6 @@ class LeptoquarkParameters:
         return (
             f"Leptoquark Model: {self.leptoquark_model}\n"
             f"Leptoquark Mass: {self.leptoquark_mass} GeV\n"
-            f"Ignore Single/Pair Processes: {self.ignore_single_pair_processes}\n"
             f"Significance: {self.significance}\n"
             f"Systematic error: {self.systematic_error * 100:.2f}%\n"
             f"Extra Width: {self.extra_width} GeV\n"
@@ -74,23 +71,14 @@ class NonInteractiveInputParameters:
 class SingleCouplingCrossSections:
     def __init__(
         self,
-        cross_section_pureqcd: float,
-        cross_section_pair_production: float,
-        cross_section_single_production: float,
         cross_section_interference: float,
         cross_section_tchannel: float,
     ):
-        self.cross_section_pureqcd = cross_section_pureqcd
-        self.cross_section_pair_production = cross_section_pair_production
-        self.cross_section_single_production = cross_section_single_production
         self.cross_section_interference = cross_section_interference
         self.cross_section_tchannel = cross_section_tchannel
 
     def __str__(self):
         return (
-            f"Cross Section Pure QCD: {self.cross_section_pureqcd}\n"
-            f"Cross Section Pair Production: {self.cross_section_pair_production}\n"
-            f"Cross Section Single Production: {self.cross_section_single_production}\n"
             f"Cross Section Interference: {self.cross_section_interference}\n"
             f"Cross Section T-Channel: {self.cross_section_tchannel}"
         )
@@ -114,23 +102,14 @@ class CrossTermsCrossSections:
 class SingleCouplingEfficiency:
     def __init__(
         self,
-        efficiency_pureqcd: List[float],
-        efficiency_pair_production: List[float],
-        efficiency_single_production: List[float],
         efficiency_interference: List[float],
         efficiency_tchannel: List[float],
     ):
-        self.efficiency_pureqcd = efficiency_pureqcd
-        self.efficiency_pair_production = efficiency_pair_production
-        self.efficiency_single_production = efficiency_single_production
         self.efficiency_interference = efficiency_interference
         self.efficiency_tchannel = efficiency_tchannel
 
     def __str__(self):
         return (
-            f"Efficiency Pure QCD: {self.efficiency_pureqcd}\n"
-            f"Efficiency Pair Production: {self.efficiency_pair_production}\n"
-            f"Efficiency Single Production: {self.efficiency_single_production}\n"
             f"Efficiency Interference: {self.efficiency_interference}\n"
             f"Efficiency T-Channel: {self.efficiency_tchannel}"
         )
@@ -159,15 +138,9 @@ class TagsTauTau:
 class SingleCouplingEfficiencyTauTau:
     def __init__(
         self,
-        efficiency_pureqcd: TagsTauTau,
-        efficiency_pair_production: TagsTauTau,
-        efficiency_single_production: TagsTauTau,
         efficiency_interference: TagsTauTau,
         efficiency_tchannel: TagsTauTau,
     ):
-        self.efficiency_pureqcd = efficiency_pureqcd
-        self.efficiency_pair_production = efficiency_pair_production
-        self.efficiency_single_production = efficiency_single_production
         self.efficiency_interference = efficiency_interference
         self.efficiency_tchannel = efficiency_tchannel
 

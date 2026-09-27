@@ -48,15 +48,14 @@ def readCardData(non_interactive_input_parameters: NonInteractiveInputParameters
     leptoquark_model = input_card_lines[0].split("#")[0].strip()
     leptoquark_mass = input_card_lines[1].split("#")[0].strip()
     couplings = input_card_lines[2].split("#")[0].strip()
-    ignore_single_pair_processes = input_card_lines[3].split("#")[0].strip()
-    significance = input_card_lines[4].split("#")[0].strip()
-    systematic_error = input_card_lines[5].split("#")[0].strip()
-    extra_width = input_card_lines[6].split("#")[0].strip()
-    random_points = input_card_lines[7].split("#")[0].strip()
+    significance = input_card_lines[3].split("#")[0].strip()
+    systematic_error = input_card_lines[4].split("#")[0].strip()
+    extra_width = input_card_lines[5].split("#")[0].strip()
+    random_points = input_card_lines[6].split("#")[0].strip()
 
     # Create the leptoquarkParameters class instance
     # From here on, this will be used for referencing to any input data and has all information
-    return validateInputData(leptoquark_model, leptoquark_mass, couplings, ignore_single_pair_processes, significance, systematic_error, extra_width, luminosity, random_points)
+    return validateInputData(leptoquark_model, leptoquark_mass, couplings, significance, systematic_error, extra_width, luminosity, random_points)
 
 def updateRandomPoints(random_points: int, non_interactive_input_parameters: NonInteractiveInputParameters, leptoquark_parameters: LeptoquarkParameters):
     """

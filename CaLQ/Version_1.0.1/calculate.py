@@ -9,7 +9,6 @@ from utilities.branching_fraction import getBranchingFraction
 from utilities.data_classes import LeptoquarkParameters, NonInteractiveInputParameters
 from utilities.validate import validateInteractiveInputCouplingValues
 from calculations.cross_section import getCrossSections
-from calculations.mass import makeLeptoquarkMassDictionary
 from calculations.efficiencies import getEfficiencies
 from calculations.chi_square import getChiSquareSymbolic
 from calculations.helper import getDeltaChiSquare
@@ -31,8 +30,8 @@ def calculate(
     symbolic_couplings = [sym.Symbol(coupling) for coupling in leptoquark_parameters.sorted_couplings]
 
     # get branching fraction
-    mass_dictionary = makeLeptoquarkMassDictionary(leptoquark_parameters.sorted_couplings)
-    branching_fraction = getBranchingFraction(leptoquark_parameters, symbolic_couplings, mass_dictionary)
+    # branching_fraction = getBranchingFraction(leptoquark_parameters, symbolic_couplings, mass_dictionary)
+    branching_fraction = sym.Integer(1)
 
     # calcualte chi-square
     chi_square_symbolic = getChiSquareSymbolic(leptoquark_parameters, branching_fraction, coupling_to_process_cross_section_map, coupling_to_process_efficiencies_map, symbolic_couplings, True)

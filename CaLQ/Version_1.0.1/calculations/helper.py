@@ -1,14 +1,41 @@
 import os
 import warnings
 import sympy as sym
+from functools import lru_cache
 from typing import Dict, Union, List
 from sympy.utilities.iterables import flatten
 
 from utilities.data_classes import SingleCouplingEfficiency, SingleCouplingEfficiencyTauTau, CrossTermsEfficiency, CrossTermsEfficiencyTauTau, TagsTauTau, SingleCouplingCrossSections, CrossTermsCrossSections
 from utilities.data_classes import LeptoquarkParameters 
-from utilities.constants import chi_sq_limits_1, chi_sq_limits_2
+from utilities.constants import (
+    chi_sq_limits_1,
+    chi_sq_limits_2,
+    get_cross_sections_df_cross_terms_tchannel,
+)
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+
+
+@lru_cache(maxsize=None)
+def _getCrossTermsHeaders(leptoquark_model: str) -> frozenset:
+    return frozenset(
+        get_cross_sections_df_cross_terms_tchannel(leptoquark_model).columns
+    )
+
+
+def resolveCrossTermsCoupling(coupling1: str, coupling2: str, leptoquark_model: str) -> str:
+    cross_terms_headers = _getCrossTermsHeaders(leptoquark_model)
+    coupling_orders = (
+        f"{coupling1}_{coupling2}",
+        f"{coupling2}_{coupling1}",
+    )
+    for coupling_order in coupling_orders:
+        if coupling_order in cross_terms_headers:
+            return coupling_order
+    raise ValueError(
+        f"No cross-term data found for {coupling1} and {coupling2} "
+        f"in model {leptoquark_model}."
+    )
 
 def getNumbersFromCsvFiles(directory):
     """
@@ -53,17 +80,11 @@ def transposeMatrix(matrix):
 
 def getCrossSectionFromProcess(process_path: str, coupling_to_process_cross_section_map: Dict[str, Union[SingleCouplingCrossSections, CrossTermsCrossSections]], coupling: str) -> float:
     singleCouplingCrossSection = coupling_to_process_cross_section_map[coupling]
-    # Path: {DATA_PREFIX}/model/{model}/efficiency/i/{coupling[lepton_index]}{coupling[quark_index]}{coupling[chirality_index]}/
-    if process_path.split('/')[4] == 'q':
-        return singleCouplingCrossSection.cross_section_pureqcd
-    elif process_path.split('/')[4] == 'p':
-        return singleCouplingCrossSection.cross_section_pair_production
-    elif process_path.split('/')[4] == 'i':
+    # Path: {DATA_PREFIX}/model/{model}/efficiency/i/{coupling}/
+    if process_path.split('/')[4] == 'i':
         return singleCouplingCrossSection.cross_section_interference
     elif process_path.split('/')[4] == 't':
         return singleCouplingCrossSection.cross_section_tchannel
-    elif process_path.split('/')[4] == 's':
-        return singleCouplingCrossSection.cross_section_single_production
     return 0
 
 def getEfficienciesFromProcess(process_path: str, coupling_to_process_efficiencies_map: Dict[str, Union[SingleCouplingEfficiency, SingleCouplingEfficiencyTauTau, CrossTermsEfficiency, CrossTermsEfficiencyTauTau]], coupling: str) -> List[float]:
@@ -71,17 +92,11 @@ def getEfficienciesFromProcess(process_path: str, coupling_to_process_efficienci
     return the correct efficiencies on the basis of process
     """
     efficienciesObject = coupling_to_process_efficiencies_map[coupling]
-    # Path: {DATA_PREFIX}/model/{model}/efficiency/i/{coupling[lepton_index]}{coupling[quark_index]}{coupling[chirality_index]}/
-    if process_path.split('/')[4] == 'q':
-        return efficienciesObject.efficiency_pureqcd
-    elif process_path.split('/')[4] == 'p':
-        return efficienciesObject.efficiency_pair_production
-    elif process_path.split('/')[4] == 'i':
+    # Path: {DATA_PREFIX}/model/{model}/efficiency/i/{coupling}/
+    if process_path.split('/')[4] == 'i':
         return efficienciesObject.efficiency_interference
     elif process_path.split('/')[4] == 't':
         return efficienciesObject.efficiency_tchannel
-    elif process_path.split('/')[4] == 's':
-        return efficienciesObject.efficiency_single_production
 
     return []
 
@@ -90,19 +105,13 @@ def getEfficienciesFromProcessAndTagNameTauTau(process_path: str, tagName: str, 
     return the correct efficiencies for tautau on the basis of process & tag
     """
     efficienciesObject = coupling_to_process_efficiencies_map[coupling]
-    # Path: {DATA_PREFIX}/model/{model}/efficiency/i/{coupling[lepton_index]}{coupling[quark_index]}{coupling[chirality_index]}/
+    # Path: {DATA_PREFIX}/model/{model}/efficiency/i/{coupling}/
     # get TagsTauTau object
     tagsTauTau: TagsTauTau
-    if process_path.split('/')[4] == 'q':
-        tagsTauTau = efficienciesObject.efficiency_pureqcd
-    elif process_path.split('/')[4] == 'p':
-        tagsTauTau = efficienciesObject.efficiency_pair_production
-    elif process_path.split('/')[4] == 'i':
+    if process_path.split('/')[4] == 'i':
         tagsTauTau = efficienciesObject.efficiency_interference
     elif process_path.split('/')[4] == 't':
         tagsTauTau = efficienciesObject.efficiency_tchannel
-    elif process_path.split('/')[4] == 's':
-        tagsTauTau = efficienciesObject.efficiency_single_production
     
     # from TagsTauTau object, we get the list of efficiencies
     if tagName == "HHbT.csv":

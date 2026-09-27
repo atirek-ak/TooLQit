@@ -3,7 +3,8 @@ from typing import Dict, Union, List
 from scipy.interpolate import interp1d
 
 from calculations.helper import getNumbersFromCsvFiles, transposeMatrix, getImmediateSubdirectories, getCrossSectionFromProcess, getEfficienciesFromProcess, getEfficienciesFromProcessAndTagNameTauTau
-from utilities.constants import get_efficiency_prefix, tag_names, lepton_index, quark_index, chirality_index, global_data_precision
+from calculations.helper import resolveCrossTermsCoupling
+from utilities.constants import get_efficiency_prefix, tag_names, global_data_precision, quark_index
 from utilities.data_classes import LeptoquarkParameters, SingleCouplingEfficiency, SingleCouplingEfficiencyTauTau, CrossTermsEfficiency, CrossTermsEfficiencyTauTau, TagsTauTau, SingleCouplingCrossSections, CrossTermsCrossSections
 
 
@@ -23,31 +24,19 @@ def getEfficiencies(
 
     # directory paths of efficiency files
     path_interference = [
-        f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/i/{coupling[lepton_index]}{coupling[quark_index]}{coupling[chirality_index]}/"
-        for coupling in leptoquark_parameters.sorted_couplings
-    ]
-    path_pair = [
-        f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/p/{coupling[lepton_index]}{coupling[quark_index]}{coupling[chirality_index]}/"
-        for coupling in leptoquark_parameters.sorted_couplings
-    ]
-    path_single = [
-        f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/s/{coupling[lepton_index]}{coupling[quark_index]}{coupling[chirality_index]}/"
+        f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/i/{coupling}/"
         for coupling in leptoquark_parameters.sorted_couplings
     ]
     path_tchannel = [
-        f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/t/{coupling[lepton_index]}{coupling[quark_index]}{coupling[chirality_index]}/"
-        for coupling in leptoquark_parameters.sorted_couplings
-    ]
-    path_pureqcd = [
-        f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/q/{coupling[lepton_index]}{coupling[quark_index]}{coupling[chirality_index]}/"
+        f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/t/{coupling}/"
         for coupling in leptoquark_parameters.sorted_couplings
     ]
     # Order: qpits
-    efficiency_directory_paths = [path_pureqcd, path_pair, path_interference, path_tchannel, path_single]
+    efficiency_directory_paths = [path_interference, path_tchannel]
 
     # single coupling efficiencies
     for index, coupling in enumerate(leptoquark_parameters.sorted_couplings):
-        coupling_efficiency_directory_paths = [efficiency_directory_paths[0][index], efficiency_directory_paths[1][index], efficiency_directory_paths[2][index], efficiency_directory_paths[3][index], efficiency_directory_paths[4][index]]
+        coupling_efficiency_directory_paths = [efficiency_directory_paths[0][index], efficiency_directory_paths[1][index]]
         # case tau tau
         if coupling[quark_index] == '3':
             coupling_to_process_efficiencies_map[coupling] = readAndInterpolateEfficiencyTauTau(coupling_efficiency_directory_paths, leptoquark_parameters)
@@ -59,8 +48,12 @@ def getEfficiencies(
         for j in range(i+1, len(leptoquark_parameters.sorted_couplings)):
             # if couplings belong to the same category
             if leptoquark_parameters.sorted_couplings[i][quark_index] == leptoquark_parameters.sorted_couplings[j][quark_index]:
-                cross_terms_coupling = f"{leptoquark_parameters.sorted_couplings[i]}_{leptoquark_parameters.sorted_couplings[j]}"
-                cross_terms_directory_path = f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/t/{leptoquark_parameters.sorted_couplings[i][lepton_index]}{leptoquark_parameters.sorted_couplings[i][quark_index]}{leptoquark_parameters.sorted_couplings[i][chirality_index]}_{leptoquark_parameters.sorted_couplings[j][lepton_index]}{leptoquark_parameters.sorted_couplings[j][quark_index]}{leptoquark_parameters.sorted_couplings[j][chirality_index]}/"
+                cross_terms_coupling = resolveCrossTermsCoupling(
+                    leptoquark_parameters.sorted_couplings[i],
+                    leptoquark_parameters.sorted_couplings[j],
+                    leptoquark_parameters.leptoquark_model,
+                )
+                cross_terms_directory_path = f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/t/{cross_terms_coupling}/"
                 if leptoquark_parameters.sorted_couplings[i][quark_index] == '3':
                     coupling_to_process_efficiencies_map[cross_terms_coupling] = readAndInterpolateEfficiencyTauTau([cross_terms_directory_path], leptoquark_parameters, coupling_to_process_cross_section_map, coupling_to_process_efficiencies_map, cross_terms_coupling, leptoquark_parameters.sorted_couplings[i], leptoquark_parameters.sorted_couplings[j], cross_terms= True)
                 else:
@@ -122,11 +115,8 @@ def readAndInterpolateEfficiency(path_list: List[List[str]], leptoquark_paramete
     # Processes order: qpits
     # We convert efficiencies list from this to SingleCouplingEfficiency object
     return SingleCouplingEfficiency(
-        efficiency_pureqcd = process_values[0],
-        efficiency_pair_production = process_values[1],
-        efficiency_interference = process_values[2],
-        efficiency_tchannel = process_values[3],
-        efficiency_single_production = process_values[4],
+        efficiency_interference = process_values[0],
+        efficiency_tchannel = process_values[1],
     )
 
 def readAndInterpolateEfficiencyTauTau(path_list: List[List[str]], leptoquark_parameters: LeptoquarkParameters, coupling_to_process_cross_section_map: Dict[str, Union[SingleCouplingCrossSections, CrossTermsCrossSections]] = {}, coupling_to_process_efficiencies_map: Dict[str, Union[SingleCouplingEfficiency, SingleCouplingEfficiencyTauTau, CrossTermsEfficiency, CrossTermsEfficiencyTauTau]] = {}, cross_terms_coupling: str = "", coupling1: str = "", coupling2: str = "", cross_terms: bool = False) -> Union[SingleCouplingEfficiencyTauTau, CrossTermsEfficiencyTauTau]:
@@ -193,9 +183,6 @@ def readAndInterpolateEfficiencyTauTau(path_list: List[List[str]], leptoquark_pa
     # Processes order: qpits
     # We convert efficiencies list from this to SingleCouplingEfficiency object
     return SingleCouplingEfficiencyTauTau(
-        efficiency_pureqcd = process_values[0],
-        efficiency_pair_production = process_values[1],
-        efficiency_interference = process_values[2],
-        efficiency_tchannel = process_values[3],
-        efficiency_single_production = process_values[4],
+        efficiency_interference = process_values[0],
+        efficiency_tchannel = process_values[1],
     )
