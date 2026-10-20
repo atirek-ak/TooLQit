@@ -9,7 +9,7 @@ from utilities.constants import (
     quark_index,
     global_data_precision
 )
-from calculations.helper import resolveCrossTermsCoupling
+from calculations.helper import resolveCrossTermsCoupling, shouldCalculateCrossTerms
 
 def getCrossSections(leptoquark_parameters: LeptoquarkParameters) -> Dict[str, Union[SingleCouplingCrossSections, CrossTermsCrossSections]]:
     """
@@ -42,7 +42,11 @@ def getCrossSections(leptoquark_parameters: LeptoquarkParameters) -> Dict[str, U
     for i in range(len(leptoquark_parameters.sorted_couplings)):
         for j in range(i+1, len(leptoquark_parameters.sorted_couplings)):
             # if couplings belong to the same category
-            if leptoquark_parameters.sorted_couplings[i][quark_index] == leptoquark_parameters.sorted_couplings[j][quark_index]:
+            if shouldCalculateCrossTerms(
+                leptoquark_parameters.sorted_couplings[i],
+                leptoquark_parameters.sorted_couplings[j],
+                leptoquark_parameters.leptoquark_model,
+            ):
                 cross_terms_coupling = resolveCrossTermsCoupling(
                     leptoquark_parameters.sorted_couplings[i],
                     leptoquark_parameters.sorted_couplings[j],

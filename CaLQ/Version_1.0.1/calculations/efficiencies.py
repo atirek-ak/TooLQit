@@ -1,9 +1,15 @@
+import os
 import pandas as pd
 from typing import Dict, Union, List
 from scipy.interpolate import interp1d
 
 from calculations.helper import getNumbersFromCsvFiles, transposeMatrix, getImmediateSubdirectories, getCrossSectionFromProcess, getEfficienciesFromProcess, getEfficienciesFromProcessAndTagNameTauTau
-from calculations.helper import resolveCrossTermsCoupling
+from calculations.helper import (
+    resolveCrossTermsCoupling,
+    getR2CrossTermsEfficiencyCandidates,
+    shouldCalculateCrossTerms,
+    hasTauTagEfficiency,
+)
 from utilities.constants import get_efficiency_prefix, tag_names, global_data_precision, quark_index
 from utilities.data_classes import LeptoquarkParameters, SingleCouplingEfficiency, SingleCouplingEfficiencyTauTau, CrossTermsEfficiency, CrossTermsEfficiencyTauTau, TagsTauTau, SingleCouplingCrossSections, CrossTermsCrossSections
 
@@ -38,7 +44,10 @@ def getEfficiencies(
     for index, coupling in enumerate(leptoquark_parameters.sorted_couplings):
         coupling_efficiency_directory_paths = [efficiency_directory_paths[0][index], efficiency_directory_paths[1][index]]
         # case tau tau
-        if coupling[quark_index] == '3':
+        if coupling[quark_index] == '3' or (
+            leptoquark_parameters.leptoquark_model == "R2"
+            and hasTauTagEfficiency(coupling_efficiency_directory_paths)
+        ):
             coupling_to_process_efficiencies_map[coupling] = readAndInterpolateEfficiencyTauTau(coupling_efficiency_directory_paths, leptoquark_parameters)
         else:
             coupling_to_process_efficiencies_map[coupling] = readAndInterpolateEfficiency(coupling_efficiency_directory_paths, leptoquark_parameters)
@@ -47,14 +56,37 @@ def getEfficiencies(
     for i in range(len(leptoquark_parameters.sorted_couplings)):
         for j in range(i+1, len(leptoquark_parameters.sorted_couplings)):
             # if couplings belong to the same category
-            if leptoquark_parameters.sorted_couplings[i][quark_index] == leptoquark_parameters.sorted_couplings[j][quark_index]:
+            if shouldCalculateCrossTerms(
+                leptoquark_parameters.sorted_couplings[i],
+                leptoquark_parameters.sorted_couplings[j],
+                leptoquark_parameters.leptoquark_model,
+            ):
                 cross_terms_coupling = resolveCrossTermsCoupling(
                     leptoquark_parameters.sorted_couplings[i],
                     leptoquark_parameters.sorted_couplings[j],
                     leptoquark_parameters.leptoquark_model,
                 )
                 cross_terms_directory_path = f"{get_efficiency_prefix(leptoquark_parameters.leptoquark_model)}/t/{cross_terms_coupling}/"
-                if leptoquark_parameters.sorted_couplings[i][quark_index] == '3':
+                if leptoquark_parameters.leptoquark_model == "R2":
+                    candidate_paths = [
+                        f"{get_efficiency_prefix('R2')}/t/{candidate}/"
+                        for candidate in getR2CrossTermsEfficiencyCandidates(
+                            leptoquark_parameters.sorted_couplings[i],
+                            leptoquark_parameters.sorted_couplings[j],
+                        )
+                    ]
+                    cross_terms_directory_path = next(
+                        (
+                            path
+                            for path in candidate_paths
+                            if os.path.isdir(path) and os.listdir(path)
+                        ),
+                        cross_terms_directory_path,
+                    )
+                if leptoquark_parameters.sorted_couplings[i][quark_index] == '3' or (
+                    leptoquark_parameters.leptoquark_model == "R2"
+                    and hasTauTagEfficiency([cross_terms_directory_path])
+                ):
                     coupling_to_process_efficiencies_map[cross_terms_coupling] = readAndInterpolateEfficiencyTauTau([cross_terms_directory_path], leptoquark_parameters, coupling_to_process_cross_section_map, coupling_to_process_efficiencies_map, cross_terms_coupling, leptoquark_parameters.sorted_couplings[i], leptoquark_parameters.sorted_couplings[j], cross_terms= True)
                 else:
                     coupling_to_process_efficiencies_map[cross_terms_coupling] = readAndInterpolateEfficiency([cross_terms_directory_path], leptoquark_parameters, coupling_to_process_cross_section_map, coupling_to_process_efficiencies_map, cross_terms_coupling, leptoquark_parameters.sorted_couplings[i], leptoquark_parameters.sorted_couplings[j], cross_terms= True)

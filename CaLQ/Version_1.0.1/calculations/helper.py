@@ -1,4 +1,5 @@
 import os
+import re
 import warnings
 import sympy as sym
 from functools import lru_cache
@@ -35,6 +36,54 @@ def resolveCrossTermsCoupling(coupling1: str, coupling2: str, leptoquark_model: 
     raise ValueError(
         f"No cross-term data found for {coupling1} and {coupling2} "
         f"in model {leptoquark_model}."
+    )
+
+
+def getR2CrossTermsEfficiencyCandidates(coupling1: str, coupling2: str) -> List[str]:
+    coupling_pattern = re.compile(r"([XY][1-3]{2})(LR|RL)([1-3])x([1-3])")
+    matches = [coupling_pattern.fullmatch(coupling) for coupling in (coupling1, coupling2)]
+    if any(match is None for match in matches):
+        return []
+
+    first_match, second_match = matches
+    if first_match.group(2) == second_match.group(2):
+        return []
+
+    def invert_flavours(match):
+        prefix, chirality, first_flavour, second_flavour = match.groups()
+        inverted_chirality = "RL" if chirality == "LR" else "LR"
+        return f"{prefix}{inverted_chirality}{second_flavour}x{first_flavour}"
+
+    first_inverted = invert_flavours(first_match)
+    second_inverted = invert_flavours(second_match)
+    matching_pairs = (
+        (first_inverted, coupling2),
+        (coupling1, second_inverted),
+    )
+
+    candidates = []
+    for first, second in matching_pairs:
+        candidates.extend((f"{second}_{first}", f"{first}_{second}"))
+    return candidates
+
+
+def shouldCalculateCrossTerms(
+    coupling1: str, coupling2: str, leptoquark_model: str
+) -> bool:
+    if coupling1[2] == coupling2[2]:
+        return True
+    return leptoquark_model == "R2" and bool(
+        getR2CrossTermsEfficiencyCandidates(coupling1, coupling2)
+    )
+
+
+def hasTauTagEfficiency(paths: List[str]) -> bool:
+    return any(
+        os.path.isfile(os.path.join(path, mass, tag_name))
+        for path in paths
+        if os.path.isdir(path)
+        for mass in os.listdir(path)
+        for tag_name in ("HHbT.csv", "HHbV.csv", "LHbT.csv", "LHbV.csv")
     )
 
 def getNumbersFromCsvFiles(directory):

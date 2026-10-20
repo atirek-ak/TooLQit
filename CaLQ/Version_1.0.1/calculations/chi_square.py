@@ -15,7 +15,7 @@ from utilities.constants import (
     quark_index,
     tag_names,
 )
-from calculations.helper import resolveCrossTermsCoupling
+from calculations.helper import resolveCrossTermsCoupling, shouldCalculateCrossTerms
 
 
 def getDileptonData(number_of_bins: int):
@@ -245,7 +245,10 @@ def getChiSquareSymbolic(leptoquark_parameters: LeptoquarkParameters, branching_
 
     # calculate single coupling contribution
     for coupling, symbolic_coupling, in zip(leptoquark_parameters.sorted_couplings, symbolic_couplings):
-        if coupling[quark_index] == '3':
+        if isinstance(
+            coupling_to_process_efficiencies_map[coupling],
+            SingleCouplingEfficiencyTauTau,
+        ):
             chi_square = chi_square + calculateCouplingContributionTauTau(
                 leptoquark_parameters, coupling, symbolic_coupling, branching_fraction, coupling_to_process_cross_section_map[coupling], coupling_to_process_efficiencies_map[coupling]
             )
@@ -260,13 +263,20 @@ def getChiSquareSymbolic(leptoquark_parameters: LeptoquarkParameters, branching_
     for i in range(len(leptoquark_parameters.sorted_couplings)):
         for j in range(i+1, len(leptoquark_parameters.sorted_couplings)):
             # if couplings belong to the same category
-            if leptoquark_parameters.sorted_couplings[i][quark_index] == leptoquark_parameters.sorted_couplings[j][quark_index]:
+            if shouldCalculateCrossTerms(
+                leptoquark_parameters.sorted_couplings[i],
+                leptoquark_parameters.sorted_couplings[j],
+                leptoquark_parameters.leptoquark_model,
+            ):
                 cross_terms_coupling = resolveCrossTermsCoupling(
                     leptoquark_parameters.sorted_couplings[i],
                     leptoquark_parameters.sorted_couplings[j],
                     leptoquark_parameters.leptoquark_model,
                 )
-                if coupling[quark_index] == '3':
+                if isinstance(
+                    coupling_to_process_efficiencies_map[cross_terms_coupling],
+                    CrossTermsEfficiencyTauTau,
+                ):
                     chi_square = chi_square + calculateCouplingContributionTauTauCrossTerms(
                         leptoquark_parameters, leptoquark_parameters.sorted_couplings[i], leptoquark_parameters.sorted_couplings[j], symbolic_couplings[i], symbolic_couplings[j], coupling_to_process_cross_section_map[cross_terms_coupling], coupling_to_process_efficiencies_map[cross_terms_coupling]
                     )
